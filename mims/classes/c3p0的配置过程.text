@@ -1,0 +1,116 @@
+
+c3p0在spring下的配置过程
+
+    博客分类： JavaEE 
+
+SpringHibernateMySQLJDBCXML 
+前几天在配置hibernate的c3p0连接池时报出了死锁的异常。
+经过一顿的学习，现在项目中已经解决了这个问题，
+现将其配置记录于下，供自己和有需要的人查阅。
+1、在hibernate.properties中添加：
+Xml代码  收藏代码
+
+    hibernate.connection.provider_class =org.hibernate.connection.C3P0ConnectionProvider  
+
+
+
+2、将c3p0的常规配置我新建在了自己写的properites中，取名：jdbc.properties,关于c3p0的代码如下：
+Xml代码  收藏代码
+
+    ######C3P0 MySQL config #######  
+    c3p0.url=jdbc:mysql://localhost:3306/test?useUnicode=true&characterEncoding=utf8&mysqlEncoding=utf8   
+    c3p0.user=root  
+    c3p0.password=root  
+      
+    c3p0.driverClass=com.mysql.jdbc.Driver  
+    c3p0.acquireIncrement=1  
+    c3p0.maxIdleTime=60  
+    c3p0.maxPoolSize=200  
+    c3p0.minPoolSize=50  
+    c3p0.initialPoolSize=300  
+
+
+
+3、在spring中对DataAccess的配置如下：
+Xml代码  收藏代码
+
+    <bean id="dataSource"  
+        class="com.mchange.v2.c3p0.ComboPooledDataSource"  
+        destroy-method="close">  
+        <property name="driverClass" value="${c3p0.driverClass}"></property>  
+        <property name="jdbcUrl" value="${c3p0.url}"></property>  
+        <property name="user" value="${c3p0.user}"></property>  
+        <property name="password" value="${c3p0.password}"></property>  
+        <property name="acquireIncrement" value="${c3p0.acquireIncrement}"></property>  
+        <property name="initialPoolSize" value="${c3p0.initialPoolSize}"></property>  
+        <property name="maxIdleTime" value="${c3p0.maxIdleTime}"></property>  
+        <property name="maxPoolSize" value="${c3p0.maxPoolSize}"></property>  
+        <property name="minPoolSize" value="${c3p0.minPoolSize}"></property>  
+          
+        <property name="acquireRetryDelay" value="1000"></property>  
+        <property name="acquireRetryAttempts" value="60"></property>  
+        <property name="breakAfterAcquireFailure" value="false"></property>  
+    </bean>  
+    <!--Hibernate SessionFatory-->  
+    <bean id="sessionFactory"  
+        class="org.springframework.orm.hibernate3.LocalSessionFactoryBean">  
+        <property name="dataSource" ref="dataSource" />  
+        <property name="lobHandler" ref="lobHandler" />  
+        <property name="configLocations">  
+            <list>  
+                <value>classpath*:/hibernate/hibernate.cfg.xml</value>  
+            </list>  
+        </property>  
+        <property name="configurationClass"  
+            value="org.hibernate.cfg.AnnotationConfiguration" />  
+        <!-- 如果采用hbm 方式  
+            <property name="mappingDirectoryLocations">  
+            <list>  
+            <value>  
+            classpath*:/org/ustb/mis/model/hbm/  
+            </value>  
+            </list>  
+            </property>  
+        -->  
+        <property name="hibernateProperties">  
+            <props>  
+                <prop key="hibernate.dialect">  
+                    ${hibernate.dialect}  
+                </prop>  
+                <prop key="hibernate.show_sql">  
+                    ${hibernate.show_sql}  
+                </prop>  
+                <prop key="hibernate.cache.use_query_cache">  
+                    ${hibernate.cache.use_query_cache}  
+                </prop>  
+                <prop key="hibernate.cache.provider_class">  
+                    ${hibernate.cache.provider_class}  
+                </prop>  
+    lt;!-- 配置C3P0ConnectionProvider-->  
+                <prop key="hibernate.connection.provider_class">  
+                    ${hibernate.connection.provider_class}  
+                </prop>  
+                <prop key="hibernate.current_session_context_class">  
+                    ${hibernate.current_session_context_class}  
+                </prop>  
+            </props>  
+        </property>  
+    </bean>  
+
+
+其中，属性文件通过如下方式读入：
+Xml代码  收藏代码
+
+    <!-- 属性文件读入 -->  
+    <bean id="propertyConfigurer"  
+        class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer">  
+        <property name="locations">  
+            <list>  
+                <value>classpath*:hibernate/jdbc.properties</value>  
+                <value>classpath*:hibernate/hibernate.properties</value>  
+            </list>  
+        </property>  
+    </bean>  
+
+
+对于各个c3p0属性的意义及设置，很多文章都谈到了，我参考的是： http://msq.iteye.com/的文章：C3P0连接池详细配置。 
